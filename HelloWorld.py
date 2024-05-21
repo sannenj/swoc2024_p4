@@ -10,6 +10,7 @@ import player_pb2_grpc
 playerIdentifier = ""
 
 MY_NAME = 'Tommie'
+server = "localhost:5168"
 
 def calc_dist(p1, p2):
     delta = map(lambda x, y: abs(x - y), p1, p2)
@@ -375,13 +376,13 @@ class GameState:
 
 
 async def ListenToServerEvents() -> None:
-        with grpc.insecure_channel("192.168.178.62:5168") as channel:
+        with grpc.insecure_channel(server) as channel:
             stub = player_pb2_grpc.PlayerHostStub(channel)
             for thing in stub.SubscribeToServerEvents(player_pb2.EmptyRequest()):
                 print(thing)
 
 def Register(playerName):
-    with grpc.insecure_channel("192.168.178.62:5168") as channel:
+    with grpc.insecure_channel(server) as channel:
         stub = player_pb2_grpc.PlayerHostStub(channel)
         registerResponse = stub.Register(player_pb2.RegisterRequest(playerName=playerName))
         global playerIdentifier
@@ -392,7 +393,7 @@ def Register(playerName):
         return gameState
 
 async def Subscribe(gameState) -> None:
-        with grpc.insecure_channel("192.168.178.62:5168") as channel:
+        with grpc.insecure_channel(server) as channel:
             stub = player_pb2_grpc.PlayerHostStub(channel)
             for thing in stub.Subscribe(player_pb2.SubsribeRequest(playerIdentifier=playerIdentifier)):
                 gameState.update(gameUpdate=thing)
