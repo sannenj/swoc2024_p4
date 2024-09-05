@@ -170,10 +170,10 @@ class GameState:
                     head_cell.Player = ''  # In case of claim, this ws claimed, but will not be updated by server
                 if snake.Hunt:
                     snake.Hunt.Hunt = None  # other snake is not hunted anymore
-            elif self.getCell(snake.Head).Player != MY_NAME:
-                # Died... or saved!
-                print("***** SNAKE is not in expected cell, removing: {} {}", snake.Name, snake.Head)
-                self.Snakes.remove(snake)
+            # elif self.getCell(snake.Head).Player != MY_NAME:
+            #     # Died... or saved!
+            #     print("***** SNAKE is not in expected cell, removing: {} {}", snake.Name, snake.Head)
+            #     self.Snakes.remove(snake)
         self.prune_other_snakes()
         for food in self.Foods:
             food.Claims = 0
