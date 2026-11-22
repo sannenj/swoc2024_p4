@@ -1,5 +1,9 @@
 import functools
 import operator
+import os
+
+# Select the backend before gRPC or the generated modules import protobuf.
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
 import grpc
 import numpy as np
@@ -381,32 +385,31 @@ async def ListenToServerEvents() -> None:
             for thing in stub.SubscribeToServerEvents(player_pb2.EmptyRequest()):
                 print(thing)
 
-def Register(playerName):
-    with grpc.insecure_channel(server) as channel:
-        stub = player_pb2_grpc.PlayerHostStub(channel)
-        registerResponse = stub.Register(player_pb2.RegisterRequest(playerName=playerName))
-        global playerIdentifier
-        gameState = GameState(registerResponse.dimensions, registerResponse.startAddress, playerName)
-        playerIdentifier = registerResponse.playerIdentifier
-        initial_state = stub.GetGameState(player_pb2.EmptyRequest())
-        gameState.set_state(initial_state)
-        return gameState
+def Register(playerName, stub):
+    registerResponse = stub.Register(player_pb2.RegisterRequest(playerName=playerName))
+    global playerIdentifier
+    gameState = GameState(registerResponse.dimensions, registerResponse.startAddress, playerName)
+    playerIdentifier = registerResponse.playerIdentifier
+    initial_state = stub.GetGameState(player_pb2.EmptyRequest())
+    gameState.set_state(initial_state)
+    return gameState
 
-async def Subscribe(gameState) -> None:
-        with grpc.insecure_channel(server) as channel:
-            stub = player_pb2_grpc.PlayerHostStub(channel)
-            for thing in stub.Subscribe(player_pb2.SubsribeRequest(playerIdentifier=playerIdentifier)):
-                gameState.update(gameUpdate=thing)
-                for split in gameState.getSplits():
-                    stub.SplitSnake(split)
-                for move in gameState.getMoves():
-                    #print(move.snakeName + ": " + str(move.nextLocation))
-                    stub.MakeMove(move)
+async def Subscribe(gameState, stub) -> None:
+    for thing in stub.Subscribe(player_pb2.SubsribeRequest(playerIdentifier=playerIdentifier)):
+        gameState.update(gameUpdate=thing)
+        for split in gameState.getSplits():
+            stub.SplitSnake(split)
+        for move in gameState.getMoves():
+            #print(move.snakeName + ": " + str(move.nextLocation))
+            stub.MakeMove(move)
 
 async def main():
     #asyncio.create_task(ListenToServerEvents())
-    gameState = Register(MY_NAME)
-    asyncio.create_task(Subscribe(gameState))
+    # The server retains the registration connection's cancellation token.
+    with grpc.insecure_channel(server) as channel:
+        stub = player_pb2_grpc.PlayerHostStub(channel)
+        gameState = Register(MY_NAME, stub)
+        await Subscribe(gameState, stub)
 
 
 
